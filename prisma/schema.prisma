@@ -1,0 +1,361 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── SaaS core ───────────────────────────────────────────────
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships      Membership[]
+  products         Product[]
+  attributes       Attribute[]
+  attributeGroups  AttributeGroup[]
+  categories       Category[]
+  channels         Channel[]
+  importJobs       ImportJob[]
+  exportJobs       ExportJob[]
+  mappingProfiles  MappingProfile[]
+  workflows        Workflow[]
+  digitalAssets    DigitalAsset[]
+  gdsnPublications GdsnPublication[]
+  auditLogs        AuditLog[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  initials     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships   Membership[]
+  workflowTasks WorkflowTask[] @relation("AssignedTasks")
+  auditLogs     AuditLog[]
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships     Membership[]
+  rolePermissions RolePermission[]
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  module      String
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  roleId    String
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+}
+
+// ─── Catalog ─────────────────────────────────────────────────
+
+model AttributeGroup {
+  id        String   @id @default(cuid())
+  tenantId  String
+  code      String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  attributes Attribute[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Attribute {
+  id        String   @id @default(cuid())
+  tenantId  String
+  groupId   String?
+  code      String
+  name      String
+  type      String
+  channels  String[]
+  status    String   @default("draft")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  group   AttributeGroup? @relation(fields: [groupId], references: [id])
+  values  ProductAttributeValue[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  tenantId    String
+  code        String
+  name        String
+  status      String   @default("draft")
+  categoryId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category   Category?               @relation(fields: [categoryId], references: [id])
+  skus       Sku[]
+  attributes ProductAttributeValue[]
+  assets     DigitalAsset[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Sku {
+  id        String   @id @default(cuid())
+  tenantId  String
+  productId String
+  code      String
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([productId])
+}
+
+model ProductAttributeValue {
+  id          String @id @default(cuid())
+  productId   String
+  attributeId String
+  value       String
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, attributeId])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  tenantId  String
+  parentId  String?
+  code      String
+  name      String
+  level     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent   Category? @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// ─── Operations ──────────────────────────────────────────────
+
+model Channel {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String
+  connector    String
+  productCount Int      @default(0)
+  lastSyncAt   DateTime?
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model ImportJob {
+  id        String   @id @default(cuid())
+  tenantId  String
+  code      String
+  type      String
+  status    String   @default("pending")
+  rowCount  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model ExportJob {
+  id        String   @id @default(cuid())
+  tenantId  String
+  code      String
+  type      String
+  status    String   @default("pending")
+  rowCount  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model MappingProfile {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  source    String
+  target    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rules  MappingRule[]
+
+  @@index([tenantId])
+}
+
+model MappingRule {
+  id        String   @id @default(cuid())
+  profileId String
+  name      String
+  sourceField String
+  targetField String
+  transform String?
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile MappingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model Workflow {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tasks  WorkflowTask[]
+
+  @@index([tenantId])
+}
+
+model WorkflowTask {
+  id           String   @id @default(cuid())
+  workflowId   String
+  productName  String
+  stage        String
+  assigneeId   String?
+  priority     String   @default("normal")
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  assignee User?    @relation("AssignedTasks", fields: [assigneeId], references: [id])
+
+  @@index([workflowId])
+  @@index([assigneeId])
+}
+
+model DigitalAsset {
+  id        String   @id @default(cuid())
+  tenantId  String
+  productId String?
+  name      String
+  type      String
+  sizeBytes Int
+  channel   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@index([tenantId])
+}
+
+model GdsnPublication {
+  id          String   @id @default(cuid())
+  tenantId    String
+  gtin        String
+  productName String
+  dataPool    String
+  recipient   String
+  sentAt      DateTime?
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String?
+  action    String
+  module    String
+  message   String
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([createdAt])
+}
