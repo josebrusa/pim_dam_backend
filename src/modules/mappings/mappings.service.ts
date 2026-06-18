@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 
 @Injectable()
@@ -14,7 +14,10 @@ export class MappingsService {
 
   async createRule(tenantId: string, body: { profileId?: string; name: string; sourceField: string; targetField: string; transform?: string }) {
     let profileId = body.profileId;
-    if (!profileId) {
+    if (profileId) {
+      const profile = await this.prisma.mappingProfile.findFirst({ where: { id: profileId, tenantId } });
+      if (!profile) throw new NotFoundException('Perfil de mapeo no encontrado para este tenant');
+    } else {
       const profile = await this.prisma.mappingProfile.findFirst({ where: { tenantId } });
       profileId = profile?.id ?? (await this.prisma.mappingProfile.create({
         data: { tenantId, name: 'Default', source: 'external', target: 'lumify' },

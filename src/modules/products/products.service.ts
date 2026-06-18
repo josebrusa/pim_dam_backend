@@ -35,6 +35,10 @@ export class ProductsService {
   }
 
   async create(tenantId: string, body: { code: string; name: string; categoryId?: string }) {
+    if (body.categoryId) {
+      const category = await this.prisma.category.findFirst({ where: { id: body.categoryId, tenantId } });
+      if (!category) throw new NotFoundException('Categoría no encontrada para este tenant');
+    }
     return this.prisma.product.create({
       data: { tenantId, code: body.code, name: body.name, categoryId: body.categoryId, status: 'draft' },
     });
@@ -42,6 +46,10 @@ export class ProductsService {
 
   async update(tenantId: string, id: string, body: { name?: string; status?: string; categoryId?: string }) {
     await this.get(tenantId, id);
+    if (body.categoryId) {
+      const category = await this.prisma.category.findFirst({ where: { id: body.categoryId, tenantId } });
+      if (!category) throw new NotFoundException('Categoría no encontrada para este tenant');
+    }
     return this.prisma.product.update({ where: { id }, data: body });
   }
 }

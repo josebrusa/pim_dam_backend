@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { paginated } from '../../shared/dto/pagination.dto';
 
@@ -21,6 +21,10 @@ export class CategoriesService {
   }
 
   async create(tenantId: string, body: { code: string; name: string; parentId?: string; level?: number }) {
+    if (body.parentId) {
+      const parent = await this.prisma.category.findFirst({ where: { id: body.parentId, tenantId } });
+      if (!parent) throw new NotFoundException('Categoría padre no encontrada para este tenant');
+    }
     return this.prisma.category.create({
       data: { tenantId, code: body.code, name: body.name, parentId: body.parentId, level: body.level ?? 0 },
     });

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { paginated } from '../../shared/dto/pagination.dto';
 
@@ -29,6 +29,15 @@ export class AssetsService {
   }
 
   create(tenantId: string, body: { name: string; type: string; sizeBytes: number; productId?: string; channel?: string }) {
+    if (body.productId) {
+      return this.createWithValidatedProduct(tenantId, body);
+    }
+    return this.prisma.digitalAsset.create({ data: { tenantId, ...body } });
+  }
+
+  private async createWithValidatedProduct(tenantId: string, body: { name: string; type: string; sizeBytes: number; productId?: string; channel?: string }) {
+    const product = await this.prisma.product.findFirst({ where: { id: body.productId, tenantId } });
+    if (!product) throw new NotFoundException('Producto no encontrado para este tenant');
     return this.prisma.digitalAsset.create({ data: { tenantId, ...body } });
   }
 }
