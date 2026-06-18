@@ -1,55 +1,33 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-
-type DemoUser = {
-  email: string;
-  passwordHash: string;
-  name: string;
-  initials: string;
-  role: string;
-  tenantId: string;
-  permissions: string[];
-};
-
-const DEV_PASSWORD_HASH = bcrypt.hashSync('lumify2025', 10);
-
-const DEMO_USERS: DemoUser[] = [
-  {
-    email: 'admin@lumify.io',
-    passwordHash: DEV_PASSWORD_HASH,
-    name: 'Admin',
-    initials: 'AD',
-    role: 'PIM_MANAGER',
-    tenantId: 'tenant-demo',
-    permissions: ['*'],
-  },
-  {
-    email: 'm.garcia@empresa.com',
-    passwordHash: DEV_PASSWORD_HASH,
-    name: 'María García',
-    initials: 'MG',
-    role: 'MARKETING',
-    tenantId: 'tenant-demo',
-    permissions: ['products:read', 'products:write', 'dam:read', 'workflows:read'],
-  },
-  {
-    email: 'p.serra@empresa.com',
-    passwordHash: DEV_PASSWORD_HASH,
-    name: 'Pau Serra',
-    initials: 'PS',
-    role: 'IT_ADMIN',
-    tenantId: 'tenant-demo',
-    permissions: ['*'],
-  },
-];
+import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 
 @Injectable()
 export class LoginUseCase {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async execute(email: string, password: string) {
-    const user = DEMO_USERS.find((u) => u.email === email);
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: {
+        memberships: {
+          where: { status: 'active' },
+          include: {
+            role: {
+              include: {
+                rolePermissions: { include: { permission: true } },
+              },
+            },
+            tenant: true,
+          },
+        },
+      },
+    });
+
     if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
       throw new UnauthorizedException({
         code: 'INVALID_CREDENTIALS',
@@ -57,22 +35,37 @@ export class LoginUseCase {
       });
     }
 
+    const membership = user.memberships[0];
+    if (!membership) {
+      throw new UnauthorizedException({
+        code: 'NO_MEMBERSHIP',
+        message: 'Usuario sin tenant activo',
+      });
+    }
+
+    const permissions =
+      membership.role.code === 'PIM_MANAGER' || membership.role.code === 'IT_ADMIN'
+        ? ['*']
+        : membership.role.rolePermissions.map((rp: { permission: { code: string } }) => rp.permission.code);
+
     const payload = {
-      sub: user.email,
+      sub: user.id,
       email: user.email,
-      tenantId: user.tenantId,
-      role: user.role,
+      tenantId: membership.tenantId,
+      role: membership.role.code,
     };
 
     return {
       accessToken: this.jwtService.sign(payload),
       user: {
+        id: user.id,
         email: user.email,
         name: user.name,
         initials: user.initials,
-        role: user.role,
-        tenantId: user.tenantId,
-        permissions: user.permissions,
+        role: membership.role.code,
+        tenantId: membership.tenantId,
+        tenantName: membership.tenant.name,
+        permissions,
       },
     };
   }

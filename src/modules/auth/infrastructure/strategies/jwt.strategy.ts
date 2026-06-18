@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 
 export type JwtPayload = {
   sub: string;
@@ -11,7 +12,7 @@ export type JwtPayload = {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private readonly prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -19,11 +20,39 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(payload: JwtPayload) {
+  async validate(payload: JwtPayload) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: {
+        memberships: {
+          where: { tenantId: payload.tenantId, status: 'active' },
+          include: {
+            role: {
+              include: { rolePermissions: { include: { permission: true } } },
+            },
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    const membership = user?.memberships[0];
+    if (!user || !membership) return null;
+
+    const permissions =
+      membership.role.code === 'PIM_MANAGER' || membership.role.code === 'IT_ADMIN'
+        ? ['*']
+        : membership.role.rolePermissions.map((rp: { permission: { code: string } }) => rp.permission.code);
+
     return {
-      email: payload.email,
-      tenantId: payload.tenantId,
-      role: payload.role,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      initials: user.initials,
+      role: membership.role.code,
+      tenantId: membership.tenantId,
+      tenantName: membership.tenant.name,
+      permissions,
     };
   }
 }

@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { LoginDto } from '../application/dto/login.dto';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { JwtAuthGuard } from '../infrastructure/guards/jwt-auth.guard';
+import { CurrentUser, type AuthUser } from '../../../shared/decorators/auth.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -22,7 +23,7 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  me(@Req() req: { user: Record<string, unknown> }) {
-    return { user: req.user };
+  me(@CurrentUser() user: AuthUser) {
+    return { user };
   }
 }
