@@ -44,7 +44,7 @@ pnpm prisma:seed
 - `DIRECT_URL`: usa la URL directa de Neon para Prisma CLI y migraciones.
 - `CORS_ORIGIN`: dominio del frontend, por ejemplo `https://pim-dam-lumify.vercel.app`. En produccion es obligatorio o el backend falla al arrancar.
 - `JWT_SECRET`: obligatorio en produccion. El backend falla al arrancar si no existe o si sigue con el valor por defecto.
-- `AUTH_COOKIE_SAME_SITE`: por defecto `lax`.
+- `AUTH_COOKIE_SAME_SITE`: por defecto `lax`. Si el frontend entra por proxy mismo origen (`/api`), este valor es el recomendado. Si frontend y backend viven en dominios distintos, usa `none`.
 - `AUTH_COOKIE_SECURE`: por defecto `true` en produccion.
 - `RUN_DB_SEED=true`: opcional, ejecuta el seed durante el deploy.
 
