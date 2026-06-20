@@ -8,11 +8,11 @@ function run(command, args) {
   }
 }
 
-run('npx', ['prisma', 'generate']);
-run('npx', ['prisma', 'migrate', 'deploy']);
+run('pnpm', ['exec', 'prisma', 'generate']);
+run('pnpm', ['exec', 'prisma', 'migrate', 'deploy']);
 
 if (process.env.RUN_DB_SEED === 'true') {
-  run('npx', ['prisma', 'db', 'seed']);
+  run('pnpm', ['exec', 'prisma', 'db', 'seed']);
 }
 
-run('npm', ['run', 'build']);
+run('pnpm', ['run', 'build']);
