@@ -17,7 +17,15 @@ export class WorkflowsService {
       completed: workflows.reduce((n, w) => n + w.tasks.filter((t) => t.status === 'completed').length, 0),
       blocked: workflows.reduce((n, w) => n + w.tasks.filter((t) => t.status === 'blocked').length, 0),
     };
-    const [data, total] = await Promise.all([
+    const [workflowData, workflowTotal, taskData, taskTotal] = await Promise.all([
+      this.prisma.workflow.findMany({
+        where: { tenantId },
+        include: { _count: { select: { tasks: true } } },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        orderBy: { updatedAt: 'desc' },
+      }),
+      this.prisma.workflow.count({ where: { tenantId } }),
       this.prisma.workflowTask.findMany({
         where: { workflow: { tenantId } },
         include: { workflow: true, assignee: { select: { name: true } } },
@@ -27,11 +35,28 @@ export class WorkflowsService {
       }),
       this.prisma.workflowTask.count({ where: { workflow: { tenantId } } }),
     ]);
-    return { stats, tasks: paginated(data, total, page, pageSize) };
+
+    return {
+      stats,
+      workflows: paginated(workflowData, workflowTotal, page, pageSize),
+      tasks: paginated(taskData, taskTotal, page, pageSize),
+    };
   }
 
   create(tenantId: string, body: { name: string }) {
     return this.prisma.workflow.create({ data: { tenantId, name: body.name, status: 'active' } });
+  }
+
+  async update(tenantId: string, id: string, body: { name?: string; status?: string }) {
+    const workflow = await this.prisma.workflow.findFirst({ where: { id, tenantId } });
+    if (!workflow) throw new NotFoundException('Workflow no encontrado');
+    return this.prisma.workflow.update({ where: { id }, data: body });
+  }
+
+  async remove(tenantId: string, id: string) {
+    const workflow = await this.prisma.workflow.findFirst({ where: { id, tenantId } });
+    if (!workflow) throw new NotFoundException('Workflow no encontrado');
+    return this.prisma.workflow.delete({ where: { id } });
   }
 
   myTasks(tenantId: string, userId: string) {

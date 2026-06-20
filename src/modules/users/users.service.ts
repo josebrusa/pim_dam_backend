@@ -70,6 +70,37 @@ export class UsersService {
     };
   }
 
+  async update(tenantId: string, userId: string, body: { roleCode?: string; status?: string }) {
+    const membership = await this.prisma.membership.findFirst({
+      where: { tenantId, userId },
+      include: { role: true, user: true },
+    });
+    if (!membership) throw new NotFoundException('Usuario no encontrado en este tenant');
+
+    let roleId = membership.roleId;
+    if (body.roleCode) {
+      const role = await this.prisma.role.findUnique({ where: { code: body.roleCode } });
+      if (!role) throw new NotFoundException('Rol no encontrado');
+      roleId = role.id;
+    }
+
+    return this.prisma.membership.update({
+      where: { id: membership.id },
+      data: {
+        roleId,
+        ...(body.status ? { status: body.status } : {}),
+      },
+      include: { role: true, user: true },
+    });
+  }
+
+  async remove(tenantId: string, userId: string) {
+    const membership = await this.prisma.membership.findFirst({ where: { tenantId, userId } });
+    if (!membership) throw new NotFoundException('Usuario no encontrado en este tenant');
+
+    return this.prisma.membership.delete({ where: { id: membership.id } });
+  }
+
   roles() {
     return this.prisma.role.findMany({ orderBy: { code: 'asc' } });
   }

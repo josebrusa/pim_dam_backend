@@ -30,6 +30,27 @@ export class CategoriesService {
     });
   }
 
+  async update(tenantId: string, id: string, body: { name?: string; parentId?: string; level?: number }) {
+    const category = await this.prisma.category.findFirst({ where: { id, tenantId } });
+    if (!category) throw new NotFoundException('Categoría no encontrada para este tenant');
+
+    if (body.parentId) {
+      if (body.parentId === id) throw new NotFoundException('Una categoría no puede ser su propia categoría padre');
+
+      const parent = await this.prisma.category.findFirst({ where: { id: body.parentId, tenantId } });
+      if (!parent) throw new NotFoundException('Categoría padre no encontrada para este tenant');
+    }
+
+    return this.prisma.category.update({ where: { id }, data: body });
+  }
+
+  async remove(tenantId: string, id: string) {
+    const category = await this.prisma.category.findFirst({ where: { id, tenantId } });
+    if (!category) throw new NotFoundException('Categoría no encontrada para este tenant');
+
+    return this.prisma.category.delete({ where: { id } });
+  }
+
   async importTree(tenantId: string, body: { nodes: { code: string; name: string; parentCode?: string; level: number }[] }) {
     const created: string[] = [];
     const codeToId: Record<string, string> = {};

@@ -8,6 +8,19 @@ export class CreateWorkflowDto {
   name!: string;
 }
 
+export class UpdateWorkflowDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  status?: string;
+}
+
 export class UpdateWorkflowTaskDto {
   @ApiPropertyOptional()
   @IsOptional()

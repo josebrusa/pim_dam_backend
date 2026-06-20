@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { paginated } from '../../shared/dto/pagination.dto';
 
@@ -16,6 +16,20 @@ export class ChannelsService {
 
   create(tenantId: string, body: { name: string; connector: string }) {
     return this.prisma.channel.create({ data: { tenantId, name: body.name, connector: body.connector, status: 'pending' } });
+  }
+
+  async update(tenantId: string, id: string, body: { name?: string; connector?: string; status?: string }) {
+    const channel = await this.prisma.channel.findFirst({ where: { id, tenantId } });
+    if (!channel) throw new NotFoundException('Canal no encontrado para este tenant');
+
+    return this.prisma.channel.update({ where: { id }, data: body });
+  }
+
+  async remove(tenantId: string, id: string) {
+    const channel = await this.prisma.channel.findFirst({ where: { id, tenantId } });
+    if (!channel) throw new NotFoundException('Canal no encontrado para este tenant');
+
+    return this.prisma.channel.delete({ where: { id } });
   }
 
   async syncAll(tenantId: string) {

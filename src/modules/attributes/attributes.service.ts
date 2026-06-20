@@ -30,6 +30,28 @@ export class AttributesService {
     });
   }
 
+  async update(tenantId: string, id: string, body: { name?: string; type?: string; status?: string; groupId?: string; channels?: string[] }) {
+    const attribute = await this.prisma.attribute.findFirst({ where: { id, tenantId } });
+    if (!attribute) throw new NotFoundException('Atributo no encontrado para este tenant');
+
+    if (body.groupId) {
+      const group = await this.prisma.attributeGroup.findFirst({ where: { id: body.groupId, tenantId } });
+      if (!group) throw new NotFoundException('Grupo de atributos no encontrado para este tenant');
+    }
+
+    return this.prisma.attribute.update({
+      where: { id },
+      data: body,
+    });
+  }
+
+  async remove(tenantId: string, id: string) {
+    const attribute = await this.prisma.attribute.findFirst({ where: { id, tenantId } });
+    if (!attribute) throw new NotFoundException('Atributo no encontrado para este tenant');
+
+    return this.prisma.attribute.delete({ where: { id } });
+  }
+
   async groups(tenantId: string) {
     return this.prisma.attributeGroup.findMany({ where: { tenantId } });
   }

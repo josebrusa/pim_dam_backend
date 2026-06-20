@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/infrastructure/guards/jwt-auth.guard';
 import { TenantId } from '../../shared/decorators/auth.decorator';
@@ -35,5 +35,11 @@ export class ProductsController {
   @RequirePermissions('products:write')
   update(@TenantId() tenantId: string, @Param('id') id: string, @Body() body: UpdateProductDto) {
     return this.service.update(tenantId, id, body);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('products:write')
+  remove(@TenantId() tenantId: string, @Param('id') id: string) {
+    return this.service.remove(tenantId, id);
   }
 }

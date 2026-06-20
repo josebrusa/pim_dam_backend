@@ -26,6 +26,26 @@ export class CreateCategoryDto {
   level?: number;
 }
 
+export class UpdateCategoryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  parentId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  level?: number;
+}
+
 export class ImportCategoryNodeDto {
   @ApiProperty()
   @IsString()

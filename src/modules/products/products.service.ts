@@ -52,4 +52,9 @@ export class ProductsService {
     }
     return this.prisma.product.update({ where: { id }, data: body });
   }
+
+  async remove(tenantId: string, id: string) {
+    await this.get(tenantId, id);
+    return this.prisma.product.delete({ where: { id } });
+  }
 }
