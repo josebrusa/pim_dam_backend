@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { getCorsOrigins } from '../src/infrastructure/config/runtime-config';
 
 let cachedServer: any;
 
@@ -10,7 +11,7 @@ async function bootstrapServer() {
     const app = await NestFactory.create(AppModule);
     app.setGlobalPrefix('api/v1');
     app.enableCors({
-      origin: process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:5173'],
+      origin: getCorsOrigins(),
       credentials: true,
     });
     app.useGlobalPipes(
