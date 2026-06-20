@@ -28,6 +28,25 @@ export class MappingsService {
     });
   }
 
+  async updateRule(tenantId: string, id: string, body: { profileId?: string; name?: string; sourceField?: string; targetField?: string; transform?: string }) {
+    const rule = await this.prisma.mappingRule.findFirst({ where: { id, profile: { tenantId } } });
+    if (!rule) throw new NotFoundException('Regla de mapeo no encontrada');
+
+    if (body.profileId) {
+      const profile = await this.prisma.mappingProfile.findFirst({ where: { id: body.profileId, tenantId } });
+      if (!profile) throw new NotFoundException('Perfil de mapeo no encontrado para este tenant');
+    }
+
+    return this.prisma.mappingRule.update({ where: { id }, data: body });
+  }
+
+  async removeRule(tenantId: string, id: string) {
+    const rule = await this.prisma.mappingRule.findFirst({ where: { id, profile: { tenantId } } });
+    if (!rule) throw new NotFoundException('Regla de mapeo no encontrada');
+
+    return this.prisma.mappingRule.delete({ where: { id } });
+  }
+
   test(body: { sourceField: string; targetField: string; value: string; transform?: string }) {
     let result = body.value;
     if (body.transform === 'strip_html') result = body.value.replace(/<[^>]*>/g, '');

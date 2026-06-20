@@ -28,6 +28,36 @@ export class CreateMappingRuleDto {
   transform?: string;
 }
 
+export class UpdateMappingRuleDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  profileId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  sourceField?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  targetField?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  transform?: string;
+}
+
 export class TestMappingDto {
   @ApiProperty()
   @IsString()

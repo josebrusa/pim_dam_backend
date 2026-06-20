@@ -35,6 +35,25 @@ export class AssetsService {
     return this.prisma.digitalAsset.create({ data: { tenantId, ...body } });
   }
 
+  async update(tenantId: string, id: string, body: { name?: string; type?: string; sizeBytes?: number; productId?: string; channel?: string }) {
+    const asset = await this.prisma.digitalAsset.findFirst({ where: { id, tenantId } });
+    if (!asset) throw new NotFoundException('Activo no encontrado para este tenant');
+
+    if (body.productId) {
+      const product = await this.prisma.product.findFirst({ where: { id: body.productId, tenantId } });
+      if (!product) throw new NotFoundException('Producto no encontrado para este tenant');
+    }
+
+    return this.prisma.digitalAsset.update({ where: { id }, data: body });
+  }
+
+  async remove(tenantId: string, id: string) {
+    const asset = await this.prisma.digitalAsset.findFirst({ where: { id, tenantId } });
+    if (!asset) throw new NotFoundException('Activo no encontrado para este tenant');
+
+    return this.prisma.digitalAsset.delete({ where: { id } });
+  }
+
   private async createWithValidatedProduct(tenantId: string, body: { name: string; type: string; sizeBytes: number; productId?: string; channel?: string }) {
     const product = await this.prisma.product.findFirst({ where: { id: body.productId, tenantId } });
     if (!product) throw new NotFoundException('Producto no encontrado para este tenant');

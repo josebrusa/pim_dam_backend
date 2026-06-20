@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { paginated } from '../../shared/dto/pagination.dto';
 
@@ -24,5 +24,19 @@ export class GdsnService {
     return this.prisma.gdsnPublication.create({
       data: { tenantId, ...body, status: 'pending', sentAt: new Date() },
     });
+  }
+
+  async update(tenantId: string, id: string, body: { gtin?: string; productName?: string; dataPool?: string; recipient?: string; status?: string }) {
+    const publication = await this.prisma.gdsnPublication.findFirst({ where: { id, tenantId } });
+    if (!publication) throw new NotFoundException('Publicación GDSN no encontrada');
+
+    return this.prisma.gdsnPublication.update({ where: { id }, data: body });
+  }
+
+  async remove(tenantId: string, id: string) {
+    const publication = await this.prisma.gdsnPublication.findFirst({ where: { id, tenantId } });
+    if (!publication) throw new NotFoundException('Publicación GDSN no encontrada');
+
+    return this.prisma.gdsnPublication.delete({ where: { id } });
   }
 }

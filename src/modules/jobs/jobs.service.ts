@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { paginated } from '../../shared/dto/pagination.dto';
 
@@ -15,6 +15,18 @@ export class JobsService {
     return this.prisma.importJob.create({ data: { tenantId, code, type: body.type, status: 'pending' } });
   }
 
+  async updateImport(tenantId: string, id: string, body: { type?: string; status?: string }) {
+    const job = await this.prisma.importJob.findFirst({ where: { id, tenantId } });
+    if (!job) throw new NotFoundException('Import job no encontrado');
+    return this.prisma.importJob.update({ where: { id }, data: body });
+  }
+
+  async removeImport(tenantId: string, id: string) {
+    const job = await this.prisma.importJob.findFirst({ where: { id, tenantId } });
+    if (!job) throw new NotFoundException('Import job no encontrado');
+    return this.prisma.importJob.delete({ where: { id } });
+  }
+
   listExports(tenantId: string, page = 1, pageSize = 20) {
     return this.paginate(this.prisma.exportJob, tenantId, page, pageSize);
   }
@@ -22,6 +34,18 @@ export class JobsService {
   createExport(tenantId: string, body: { type: string }) {
     const code = `EXP-${Date.now().toString().slice(-4)}`;
     return this.prisma.exportJob.create({ data: { tenantId, code, type: body.type, status: 'pending' } });
+  }
+
+  async updateExport(tenantId: string, id: string, body: { type?: string; status?: string }) {
+    const job = await this.prisma.exportJob.findFirst({ where: { id, tenantId } });
+    if (!job) throw new NotFoundException('Export job no encontrado');
+    return this.prisma.exportJob.update({ where: { id }, data: body });
+  }
+
+  async removeExport(tenantId: string, id: string) {
+    const job = await this.prisma.exportJob.findFirst({ where: { id, tenantId } });
+    if (!job) throw new NotFoundException('Export job no encontrado');
+    return this.prisma.exportJob.delete({ where: { id } });
   }
 
   private async paginate(
