@@ -33,9 +33,30 @@ pnpm start:dev
 
 ```bash
 # Configura DATABASE_URL en .env
+# Si usas Neon, configura tambien DIRECT_URL con la conexion directa
 pnpm prisma:migrate
 pnpm prisma:seed
 ```
+
+## Deploy en Vercel + Neon
+
+- `DATABASE_URL`: usa la URL pooled de Neon para la aplicacion.
+- `DIRECT_URL`: usa la URL directa de Neon para Prisma CLI y migraciones.
+- `RUN_DB_SEED=true`: opcional, ejecuta el seed durante el deploy.
+
+En Vercel el script `vercel-build` ejecuta:
+
+```bash
+prisma generate
+prisma migrate deploy
+# prisma db seed solo si RUN_DB_SEED=true
+npm run build
+```
+
+Recomendado para produccion:
+
+- correr migraciones automaticamente en cada deploy
+- dejar `RUN_DB_SEED=false` y usar seed solo cuando realmente necesites cargar datos iniciales/demo
 
 ## Scripts
 
@@ -47,6 +68,7 @@ pnpm prisma:seed
 | `pnpm test:e2e` | Tests e2e |
 | `pnpm prisma:generate` | Generar cliente Prisma |
 | `pnpm prisma:migrate` | Migraciones |
+| `pnpm prisma:migrate:deploy` | Aplicar migraciones pendientes |
 | `pnpm prisma:seed` | Seed datos demo |
 
 ## Arquitectura
