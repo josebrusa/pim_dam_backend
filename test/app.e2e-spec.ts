@@ -97,8 +97,8 @@ describe('API (e2e)', () => {
       .send({ email: 'admin@lumify.io', password: 'lumify2025' })
       .expect(201);
 
-    expect(res.body.accessToken).toBeDefined();
     expect(res.body.user.email).toBe('admin@lumify.io');
+    expect(res.headers['set-cookie']).toBeDefined();
   });
 
   it('/api/v1/auth/me (GET) returns authenticated tenant user', async () => {
@@ -109,7 +109,7 @@ describe('API (e2e)', () => {
 
     const res = await request(app.getHttpServer())
       .get('/api/v1/auth/me')
-      .set('Authorization', `Bearer ${loginRes.body.accessToken}`)
+      .set('Cookie', loginRes.headers['set-cookie'])
       .expect(200);
 
     expect(res.body.user.email).toBe('admin@lumify.io');
@@ -131,7 +131,7 @@ describe('API (e2e)', () => {
 
     await request(app.getHttpServer())
       .get('/api/v1/users')
-      .set('Authorization', `Bearer ${loginRes.body.accessToken}`)
+      .set('Cookie', loginRes.headers['set-cookie'])
       .expect(200);
   });
 
@@ -143,7 +143,7 @@ describe('API (e2e)', () => {
 
     await request(app.getHttpServer())
       .get('/api/v1/users')
-      .set('Authorization', `Bearer ${loginRes.body.accessToken}`)
+      .set('Cookie', loginRes.headers['set-cookie'])
       .expect(403);
   });
 
